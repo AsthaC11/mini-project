@@ -1,18 +1,32 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { Stack } from 'expo-router';
+import { PaperProvider, MD3DarkTheme } from 'react-native-paper';
 
-SplashScreen.preventAutoHideAsync();
+const LumaTheme = {
+  ...MD3DarkTheme,
+  colors: {
+    ...MD3DarkTheme.colors,
+    primary: '#A99AE8',
+    onPrimary: '#17151F',
+    secondary: '#B8ADD9',
+    background: '#111116',
+    surface: '#1C1C25',
+    surfaceVariant: '#292834',
+    onSurface: '#F4F1FA',
+    onSurfaceVariant: '#B5B0C2',
+    outline: '#454253',
+  },
+};
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <PaperProvider theme={LumaTheme}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="recommendations" />
+      </Stack>
+    </PaperProvider>
   );
 }
