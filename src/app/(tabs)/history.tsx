@@ -1,27 +1,30 @@
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
   ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
 
 import {
   collection,
+  deleteDoc,
+  doc,
   getDocs,
   query,
   where,
 } from 'firebase/firestore';
 
-import { db, auth } from '../../firebase/firebaseConfig';
+import { auth, db } from '../../firebase/firebaseConfig';
 
 export default function HistoryScreen() {
   const [skinHistory, setSkinHistory] = useState<any[]>([]);
   const [hairHistory, setHairHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadHistory = async () => {
     const user = auth.currentUser;
@@ -46,16 +49,16 @@ export default function HistoryScreen() {
       const hairSnapshot = await getDocs(hairQuery);
 
       setSkinHistory(
-        skinSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        skinSnapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
         }))
       );
 
       setHairHistory(
-        hairSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        hairSnapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
         }))
       );
     } catch (error: any) {
@@ -68,6 +71,52 @@ export default function HistoryScreen() {
   useEffect(() => {
     loadHistory();
   }, []);
+
+  const deleteHistory = (id: string, type: string) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete this ${type} analysis?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    handleDelete(id, type);
+  };
+
+  const handleDelete = async (id: string, type: string) => {
+    const user = auth.currentUser;
+
+    if (!user) {
+      window.alert('Please login to delete this record.');
+      return;
+    }
+
+    try {
+      setDeletingId(id);
+
+      const collectionName =
+        type === 'Skin' ? 'skinAnalysis' : 'hairAnalysis';
+
+      await deleteDoc(doc(db, collectionName, id));
+
+      if (type === 'Skin') {
+        setSkinHistory((previous) =>
+          previous.filter((item) => item.id !== id)
+        );
+      } else {
+        setHairHistory((previous) =>
+          previous.filter((item) => item.id !== id)
+        );
+      }
+
+      window.alert(`${type} analysis deleted successfully.`);
+    } catch (error: any) {
+      window.alert(error.message || 'Unable to delete record.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const renderHistory = (items: any[], type: string) => {
     if (items.length === 0) {
@@ -113,6 +162,18 @@ export default function HistoryScreen() {
             ? item.sensitivity || 'Not specified'
             : item.scalp || 'Not specified'}
         </Text>
+
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => deleteHistory(item.id, type)}
+          disabled={deletingId === item.id}
+        >
+          {deletingId === item.id ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.deleteText}>Delete</Text>
+          )}
+        </TouchableOpacity>
       </View>
     ));
   };
@@ -269,6 +330,20 @@ const styles = StyleSheet.create({
     color: '#A6A1B5',
     textAlign: 'center',
     lineHeight: 21,
+  },
+
+  deleteButton: {
+    backgroundColor: '#8F4658',
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 5,
+  },
+
+  deleteText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 
   loader: {
